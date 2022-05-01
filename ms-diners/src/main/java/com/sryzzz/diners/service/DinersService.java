@@ -3,6 +3,7 @@ package com.sryzzz.diners.service;
 import cn.hutool.core.bean.BeanUtil;
 import com.sryzzz.commons.constant.ApiConstant;
 import com.sryzzz.commons.model.domain.ResultInfo;
+import com.sryzzz.commons.model.dto.DinersDTO;
 import com.sryzzz.commons.model.pojo.Diners;
 import com.sryzzz.commons.utils.AssertUtil;
 import com.sryzzz.commons.utils.ResultInfoUtil;
@@ -10,6 +11,7 @@ import com.sryzzz.diners.config.OAuth2ClientConfiguration;
 import com.sryzzz.diners.domain.OAuthDinerInfo;
 import com.sryzzz.diners.mapper.DinersMapper;
 import com.sryzzz.diners.vo.LoginDinerInfo;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.http.client.support.BasicAuthenticationInterceptor;
@@ -41,6 +43,9 @@ public class DinersService {
     @Resource
     private DinersMapper dinersMapper;
 
+    @Resource
+    private SendVerifyCodeService sendVerifyCodeService;
+
     /**
      * 校验手机号是否已注册
      *
@@ -60,7 +65,7 @@ public class DinersService {
      * @param account  账号：用户名、手机、邮箱
      * @param password 密码
      * @param path     请求路径
-     * @return
+     * @return 结果
      */
     public ResultInfo signIn(String account, String password, String path) {
 
@@ -105,5 +110,43 @@ public class DinersService {
         loginDinerInfo.setNickname(dinerInfo.getNickname());
 
         return ResultInfoUtil.buildSuccess(path, loginDinerInfo);
+    }
+
+    /**
+     * 用户注册
+     *
+     * @param dinersDTO 注册用户信息
+     * @param path      路径
+     * @return 结果
+     */
+    public ResultInfo register(DinersDTO dinersDTO, String path) {
+        // 参数非空校验
+        String username = dinersDTO.getUsername();
+        AssertUtil.isNotEmpty(username, "请输入用户名");
+        String password = dinersDTO.getPassword();
+        AssertUtil.isNotEmpty(password, "请输入密码");
+        String phone = dinersDTO.getPhone();
+        AssertUtil.isNotEmpty(phone, "请输入手机号");
+        String verifyCode = dinersDTO.getVerifyCode();
+        AssertUtil.isNotEmpty(verifyCode, "请输入验证码");
+
+        // 获取验证码
+        String code = sendVerifyCodeService.getCodeByPhone(phone);
+        // 验证码是否过期
+        AssertUtil.isNotEmpty(code, "验证码已过期，请重新发送");
+        // 验证码一致性校验
+        AssertUtil.isTrue(!dinersDTO.getVerifyCode().equals(code), "输入的验证码不一致");
+
+        // 验证用户名是否已注册
+        Diners diners = dinersMapper.selectByUsername(username);
+        AssertUtil.isTrue(diners != null, "用户名已存在，请重新输入");
+
+        // 注册
+        // 密码加密
+        dinersDTO.setPassword(DigestUtils.md5Hex(password.trim()));
+        dinersMapper.save(dinersDTO);
+
+        // 自动登录
+        return signIn(username.trim(), password.trim(), path);
     }
 }

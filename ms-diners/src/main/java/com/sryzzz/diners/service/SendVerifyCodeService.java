@@ -42,7 +42,7 @@ public class SendVerifyCodeService {
 
         // 发送成功，将 code 保存至 Redis，设置失效时间 60s
         String key = RedisKeyConstant.verify_code.getKey() + phone;
-        redisTemplate.opsForValue().set(key, code, 60, TimeUnit.MINUTES);
+        redisTemplate.opsForValue().set(key, code, 60, TimeUnit.SECONDS);
     }
 
     /**
@@ -55,5 +55,17 @@ public class SendVerifyCodeService {
         String key = RedisKeyConstant.verify_code.getKey() + phone;
         String code = redisTemplate.opsForValue().get(key);
         return StringUtils.isBlank(code);
+    }
+
+    /**
+     * 根据手机号获取验证码
+     *
+     * @param phone 手机号
+     * @return 验证码
+     */
+    public String getCodeByPhone(String phone) {
+        String key = RedisKeyConstant.verify_code.getKey() + phone;
+        String code = redisTemplate.opsForValue().get(key);
+        return code;
     }
 }
