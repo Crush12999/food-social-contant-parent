@@ -13,7 +13,12 @@ public enum RedisKeyConstant {
     /**
      * 验证码
      */
-    verify_code("verify_code:", "验证码");
+    verify_code("verify_code:", "验证码"),
+
+    /**
+     * 秒杀券的key
+     */
+    seckill_vouchers("seckill_vouchers:", "秒杀券的key");
 
     private String key;
     private String desc;
