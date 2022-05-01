@@ -14,6 +14,7 @@ import com.sryzzz.seckill.mapper.SeckillVouchersMapper;
 import com.sryzzz.seckill.mapper.VoucherOrdersMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
@@ -43,6 +44,9 @@ public class SeckillService {
 
     @Resource
     private RedisTemplate redisTemplate;
+
+    @Resource
+    private DefaultRedisScript defaultRedisScript;
 
     /**
      * 抢购代金券
@@ -101,8 +105,16 @@ public class SeckillService {
         // AssertUtil.isTrue(count == 0, "该券已经卖完了");
 
         // 采用 Redis 扣库存
-        long count = redisTemplate.opsForHash().increment(key, "amount", -1);
-        AssertUtil.isTrue(count < 0, "该券已经卖完了");
+        // long count = redisTemplate.opsForHash().increment(key, "amount", -1);
+        // AssertUtil.isTrue(count < 0, "该券已经卖完了");
+
+        // 采用 Redis + Lua 解决问题
+        // 扣库存
+        List<String> keys = new ArrayList<>();
+        keys.add(key);
+        keys.add("amount");
+        Long amount = (Long) redisTemplate.execute(defaultRedisScript, keys);
+        AssertUtil.isTrue(amount == null || amount < 1, "该券已经卖完了");
 
         // 下单
         VoucherOrders voucherOrders = new VoucherOrders();
@@ -114,7 +126,7 @@ public class SeckillService {
         voucherOrders.setOrderNo(orderNo);
         voucherOrders.setOrderType(1);
         voucherOrders.setStatus(0);
-        count = voucherOrdersMapper.save(voucherOrders);
+        long count = voucherOrdersMapper.save(voucherOrders);
         AssertUtil.isTrue(count == 0, "用户抢购失败");
 
         return ResultInfoUtil.buildSuccess(path, "抢购成功");
