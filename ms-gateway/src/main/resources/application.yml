@@ -25,6 +25,13 @@ spring:
           filters:
             - StripPrefix=1
 
+        - id: ms-seckill
+          uri: lb://ms-seckill
+          predicates:
+            - Path=/seckill/**
+          filters:
+            - StripPrefix=1
+
 secure:
   ignore:
     urls: # 配合白名单路径
@@ -34,6 +41,7 @@ secure:
       - /diners/send
       - /diners/checkPhone
       - /diners/register
+      - /seckill/add
 
 
 #  并注册到注册中心，启动并测试
