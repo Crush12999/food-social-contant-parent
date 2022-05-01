@@ -4,6 +4,7 @@ import com.sryzzz.commons.model.domain.ResultInfo;
 import com.sryzzz.commons.model.pojo.SeckillVouchers;
 import com.sryzzz.commons.utils.ResultInfoUtil;
 import com.sryzzz.seckill.service.SeckillService;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
@@ -24,6 +25,20 @@ public class SeckillController {
     @Resource
     private HttpServletRequest request;
 
+
+    /**
+     * 秒杀下单
+     *
+     * @param voucherId
+     * @param access_token
+     * @return
+     */
+    @PostMapping("{voucherId}")
+    public ResultInfo<String> doSeckill(@PathVariable Integer voucherId, String access_token) {
+        ResultInfo resultInfo = seckillService.doSeckill(voucherId, access_token, request.getServletPath());
+        return resultInfo;
+    }
+
     /**
      * 新增秒杀活动
      *
@@ -36,4 +51,6 @@ public class SeckillController {
         return ResultInfoUtil.buildSuccess(request.getServletPath(),
                 "添加成功");
     }
+
+
 }
