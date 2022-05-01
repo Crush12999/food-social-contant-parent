@@ -1,0 +1,26 @@
+package com.sryzzz.commons.constant;
+
+import lombok.Getter;
+
+/**
+ * @author sryzzz
+ * @create 2022/5/1 13:20
+ * @description Redis Key 公共枚举类
+ */
+@Getter
+public enum RedisKeyConstant {
+
+    /**
+     * 验证码
+     */
+    verify_code("verify_code:", "验证码");
+
+    private String key;
+    private String desc;
+
+    RedisKeyConstant(String key, String desc) {
+        this.key = key;
+        this.desc = desc;
+    }
+
+}

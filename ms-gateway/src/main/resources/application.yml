@@ -31,6 +31,8 @@ secure:
       - /actuator/**
       - /auth/oauth/**
       - /diners/signin
+      - /diners/send
+      - /diners/checkPhone
 
 
 #  并注册到注册中心，启动并测试

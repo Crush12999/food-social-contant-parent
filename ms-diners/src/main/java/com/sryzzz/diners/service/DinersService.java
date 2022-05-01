@@ -3,10 +3,12 @@ package com.sryzzz.diners.service;
 import cn.hutool.core.bean.BeanUtil;
 import com.sryzzz.commons.constant.ApiConstant;
 import com.sryzzz.commons.model.domain.ResultInfo;
+import com.sryzzz.commons.model.pojo.Diners;
 import com.sryzzz.commons.utils.AssertUtil;
 import com.sryzzz.commons.utils.ResultInfoUtil;
 import com.sryzzz.diners.config.OAuth2ClientConfiguration;
 import com.sryzzz.diners.domain.OAuthDinerInfo;
+import com.sryzzz.diners.mapper.DinersMapper;
 import com.sryzzz.diners.vo.LoginDinerInfo;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
@@ -35,6 +37,22 @@ public class DinersService {
 
     @Resource
     private OAuth2ClientConfiguration oAuth2ClientConfiguration;
+
+    @Resource
+    private DinersMapper dinersMapper;
+
+    /**
+     * 校验手机号是否已注册
+     *
+     * @param phone 手机号
+     */
+    public void checkPhoneIsRegister(String phone) {
+        AssertUtil.isNotEmpty(phone, "手机号不能为空");
+        Diners diners = dinersMapper.selectByPhone(phone);
+        AssertUtil.isTrue(diners == null, "该手机号未注册");
+        AssertUtil.isTrue(diners.getIsValid() == 0, "该用户已锁定，请先联系管理员进行解锁");
+
+    }
 
     /**
      * 登录
@@ -75,7 +93,7 @@ public class DinersService {
             resultInfo.setData(resultInfo.getMessage());
             return resultInfo;
         }
-        
+
         // 这里的 data 是一个LinkedHashMap 转成了域对象 OAuthDinerInfo
         OAuthDinerInfo dinerInfo = BeanUtil.fillBeanWithMap((LinkedHashMap) resultInfo.getData(),
                 new OAuthDinerInfo(), false);
