@@ -15,6 +15,8 @@ import com.sryzzz.commons.utils.ResultInfoUtil;
 import com.sryzzz.seckill.mapper.SeckillVouchersMapper;
 import com.sryzzz.seckill.mapper.VoucherOrdersMapper;
 import com.sryzzz.seckill.model.RedisLock;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
@@ -25,6 +27,7 @@ import org.springframework.web.client.RestTemplate;
 
 import javax.annotation.Resource;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author sryzzz
@@ -54,6 +57,9 @@ public class SeckillService {
 
     @Resource
     private RedisLock redisLock;
+
+    @Resource
+    private RedissonClient redissonClient;
 
     /**
      * 抢购代金券
@@ -119,11 +125,21 @@ public class SeckillService {
         String lockName = RedisKeyConstant.lock_key.getKey() + dinerInfo.getId() + ":" + voucherId;
         // 失效时间：活动结束时间 - 当前时间
         long expireTime = seckillVouchers.getEndTime().getTime() - now.getTime();
-        String lockKey = redisLock.tryLock(lockName, expireTime);
+
+        // 使用自定义 Redis 分布式锁
+        // String lockKey = redisLock.tryLock(lockName, expireTime);
+
+        // 使用 Redisson 分布式锁
+        RLock lock = redissonClient.getLock(lockName);
 
         try {
             // 不为空意味着拿到锁了，执行下单。拿不到锁不能执行
-            if (StrUtil.isNotBlank(lockKey)) {
+            // 自定义 Redis 分布式锁处理
+            // if (StrUtil.isNotBlank(lockKey)) {
+
+            // Redisson 分布式锁处理
+            boolean isLocked = lock.tryLock(expireTime, TimeUnit.MILLISECONDS);
+            if (isLocked) {
                 // 下单
                 VoucherOrders voucherOrders = new VoucherOrders();
                 voucherOrders.setFkDinerId(dinerInfo.getId());
@@ -149,8 +165,11 @@ public class SeckillService {
         } catch (Exception e) {
             // 手动回滚事务
             TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
-            // 解锁
-            redisLock.unlock(lockName, lockKey);
+            // 自定义 Redis 解锁
+            // redisLock.unlock(lockName, lockKey);
+
+            // Redisson 解锁
+            lock.unlock();
             if (e instanceof ParameterException) {
                 return ResultInfoUtil.buildError(0, "该券已经卖完了", path);
             }

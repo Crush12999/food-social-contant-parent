@@ -16,7 +16,7 @@ spring:
     port: 6379
     host: 192.168.131.61
     timeout: 3000
-    password:
+    # password:
 
   # swagger
   swagger:
