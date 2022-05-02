@@ -23,7 +23,19 @@ public enum RedisKeyConstant {
     /**
      * 分布式锁的key
      */
-    lock_key("lockby:", "分布式锁的key");
+    lock_key("lockby:", "分布式锁的key"),
+
+    /**
+     * 关注集合key
+     */
+    following("following:", "关注集合key"),
+
+    /**
+     * 粉丝集合key
+     */
+    followers("followers", "粉丝集合key")
+
+    ;
 
     private String key;
     private String desc;

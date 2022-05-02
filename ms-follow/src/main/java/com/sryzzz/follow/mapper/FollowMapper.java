@@ -15,7 +15,8 @@ public interface FollowMapper {
 
     /**
      * 查询关注信息
-     * @param dinerId 食客ID
+     *
+     * @param dinerId       食客ID
      * @param followDinerId 被关注者ID
      * @return 关注信息
      */
@@ -25,7 +26,8 @@ public interface FollowMapper {
 
     /**
      * 添加关注信息
-     * @param dinerId 食客ID
+     *
+     * @param dinerId       食客ID
      * @param followDinerId 被关注者ID
      * @return 关注信息
      */
@@ -35,6 +37,7 @@ public interface FollowMapper {
 
     /**
      * 修改关注信息
+     *
      * @param id
      * @param isFollowed 是否关注
      * @return
