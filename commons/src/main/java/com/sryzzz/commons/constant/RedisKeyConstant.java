@@ -33,7 +33,7 @@ public enum RedisKeyConstant {
     /**
      * 粉丝集合key
      */
-    followers("followers", "粉丝集合key")
+    followers("followers:", "粉丝集合key")
 
     ;
 
