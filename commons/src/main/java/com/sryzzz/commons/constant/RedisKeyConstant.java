@@ -18,7 +18,12 @@ public enum RedisKeyConstant {
     /**
      * 秒杀券的key
      */
-    seckill_vouchers("seckill_vouchers:", "秒杀券的key");
+    seckill_vouchers("seckill_vouchers:", "秒杀券的key"),
+
+    /**
+     * 分布式锁的key
+     */
+    lock_key("lockby:", "分布式锁的key");
 
     private String key;
     private String desc;

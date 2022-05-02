@@ -2,8 +2,10 @@ package com.sryzzz.seckill.service;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.IdUtil;
+import cn.hutool.core.util.StrUtil;
 import com.sryzzz.commons.constant.ApiConstant;
 import com.sryzzz.commons.constant.RedisKeyConstant;
+import com.sryzzz.commons.exception.ParameterException;
 import com.sryzzz.commons.model.domain.ResultInfo;
 import com.sryzzz.commons.model.pojo.SeckillVouchers;
 import com.sryzzz.commons.model.pojo.VoucherOrders;
@@ -12,11 +14,13 @@ import com.sryzzz.commons.utils.AssertUtil;
 import com.sryzzz.commons.utils.ResultInfoUtil;
 import com.sryzzz.seckill.mapper.SeckillVouchersMapper;
 import com.sryzzz.seckill.mapper.VoucherOrdersMapper;
+import com.sryzzz.seckill.model.RedisLock;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.interceptor.TransactionAspectSupport;
 import org.springframework.web.client.RestTemplate;
 
 import javax.annotation.Resource;
@@ -47,6 +51,9 @@ public class SeckillService {
 
     @Resource
     private DefaultRedisScript defaultRedisScript;
+
+    @Resource
+    private RedisLock redisLock;
 
     /**
      * 抢购代金券
@@ -108,26 +115,46 @@ public class SeckillService {
         // long count = redisTemplate.opsForHash().increment(key, "amount", -1);
         // AssertUtil.isTrue(count < 0, "该券已经卖完了");
 
-        // 采用 Redis + Lua 解决问题
-        // 扣库存
-        List<String> keys = new ArrayList<>();
-        keys.add(key);
-        keys.add("amount");
-        Long amount = (Long) redisTemplate.execute(defaultRedisScript, keys);
-        AssertUtil.isTrue(amount == null || amount < 1, "该券已经卖完了");
+        // 使用 Redis 锁 一个账号只能购买一次
+        String lockName = RedisKeyConstant.lock_key.getKey() + dinerInfo.getId() + ":" + voucherId;
+        // 失效时间：活动结束时间 - 当前时间
+        long expireTime = seckillVouchers.getEndTime().getTime() - now.getTime();
+        String lockKey = redisLock.tryLock(lockName, expireTime);
 
-        // 下单
-        VoucherOrders voucherOrders = new VoucherOrders();
-        voucherOrders.setFkDinerId(dinerInfo.getId());
-        // redis 中不需要维护这个外键的信息
-        // voucherOrders.setFkSeckillId(seckillVouchers.getId());
-        voucherOrders.setFkVoucherId(seckillVouchers.getFkVoucherId());
-        String orderNo = IdUtil.getSnowflake(1, 1).nextIdStr();
-        voucherOrders.setOrderNo(orderNo);
-        voucherOrders.setOrderType(1);
-        voucherOrders.setStatus(0);
-        long count = voucherOrdersMapper.save(voucherOrders);
-        AssertUtil.isTrue(count == 0, "用户抢购失败");
+        try {
+            // 不为空意味着拿到锁了，执行下单。拿不到锁不能执行
+            if (StrUtil.isNotBlank(lockKey)) {
+                // 下单
+                VoucherOrders voucherOrders = new VoucherOrders();
+                voucherOrders.setFkDinerId(dinerInfo.getId());
+                // redis 中不需要维护这个外键的信息
+                // voucherOrders.setFkSeckillId(seckillVouchers.getId());
+                voucherOrders.setFkVoucherId(seckillVouchers.getFkVoucherId());
+                String orderNo = IdUtil.getSnowflake(1, 1).nextIdStr();
+                voucherOrders.setOrderNo(orderNo);
+                voucherOrders.setOrderType(1);
+                voucherOrders.setStatus(0);
+                long count = voucherOrdersMapper.save(voucherOrders);
+                AssertUtil.isTrue(count == 0, "用户抢购失败");
+
+                // 采用 Redis + Lua 解决问题
+                // 扣库存
+                List<String> keys = new ArrayList<>();
+                keys.add(key);
+                keys.add("amount");
+                Long amount = (Long) redisTemplate.execute(defaultRedisScript, keys);
+                AssertUtil.isTrue(amount == null || amount < 1, "该券已经卖完了");
+            }
+
+        } catch (Exception e) {
+            // 手动回滚事务
+            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
+            // 解锁
+            redisLock.unlock(lockName, lockKey);
+            if (e instanceof ParameterException) {
+                return ResultInfoUtil.buildError(0, "该券已经卖完了", path);
+            }
+        }
 
         return ResultInfoUtil.buildSuccess(path, "抢购成功");
     }
