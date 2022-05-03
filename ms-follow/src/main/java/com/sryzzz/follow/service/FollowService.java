@@ -48,11 +48,23 @@ public class FollowService {
     private RedisTemplate redisTemplate;
 
     /**
+     * 获取粉丝的列表
+     *
+     * @param dinerId 用户
+     * @return 粉丝的 id 列表
+     */
+    public Set<Integer> findFollowers(Integer dinerId) {
+        AssertUtil.isNotNull(dinerId, "请选择需要查看的用户");
+        Set<Integer> followers = redisTemplate.opsForSet().members(RedisKeyConstant.followers.getKey() + dinerId);
+        return followers;
+    }
+
+    /**
      * 共同关注列表
      *
-     * @param dinerId 另外一个人
+     * @param dinerId     另外一个人
      * @param accessToken 当前在登录用户
-     * @param path 路径
+     * @param path        路径
      * @return 共同关注的好友
      */
     public ResultInfo findCommonsFriends(Integer dinerId, String accessToken, String path) {

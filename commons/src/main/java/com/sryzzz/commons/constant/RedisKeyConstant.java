@@ -33,7 +33,12 @@ public enum RedisKeyConstant {
     /**
      * 粉丝集合key
      */
-    followers("followers:", "粉丝集合key")
+    followers("followers:", "粉丝集合key"),
+
+    /**
+     * 我关注的好友的FeedsKey
+     */
+    following_feeds("following_feeds:", "我关注的好友的FeedsKey")
 
     ;
 

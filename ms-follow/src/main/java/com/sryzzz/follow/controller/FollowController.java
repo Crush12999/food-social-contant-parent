@@ -1,6 +1,7 @@
 package com.sryzzz.follow.controller;
 
 import com.sryzzz.commons.model.domain.ResultInfo;
+import com.sryzzz.commons.utils.ResultInfoUtil;
 import com.sryzzz.follow.service.FollowService;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,6 +20,17 @@ public class FollowController {
     private FollowService followService;
     @Resource
     private HttpServletRequest request;
+
+    /**
+     * 获取粉丝 ID 列表
+     *
+     * @param dinerId 用户
+     * @return 粉丝id列表
+     */
+    @GetMapping("followers/{dinerId}")
+    public ResultInfo findFollowers(@PathVariable Integer dinerId) {
+        return ResultInfoUtil.buildSuccess(request.getServletPath(), followService.findFollowers(dinerId));
+    }
 
     /**
      * 关注/取关
