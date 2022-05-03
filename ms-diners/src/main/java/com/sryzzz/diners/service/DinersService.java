@@ -5,6 +5,7 @@ import com.sryzzz.commons.constant.ApiConstant;
 import com.sryzzz.commons.model.domain.ResultInfo;
 import com.sryzzz.commons.model.dto.DinersDTO;
 import com.sryzzz.commons.model.pojo.Diners;
+import com.sryzzz.commons.model.vo.ShortDinerInfo;
 import com.sryzzz.commons.utils.AssertUtil;
 import com.sryzzz.commons.utils.ResultInfoUtil;
 import com.sryzzz.diners.config.OAuth2ClientConfiguration;
@@ -22,6 +23,7 @@ import org.springframework.web.client.RestTemplate;
 
 import javax.annotation.Resource;
 import java.util.LinkedHashMap;
+import java.util.List;
 
 /**
  * @author sryzzz
@@ -148,5 +150,18 @@ public class DinersService {
 
         // 自动登录
         return signIn(username.trim(), password.trim(), path);
+    }
+
+    /**
+     * 根据 ids 查询食客信息
+     *
+     * @param ids 主键 id，多个以逗号分隔，逗号之间不用空格
+     * @return
+     */
+    public List<ShortDinerInfo> findByIds(String ids) {
+        AssertUtil.isNotEmpty(ids);
+        String[] idArr = ids.split(",");
+        List<ShortDinerInfo> dinerInfos = dinersMapper.findByIds(idArr);
+        return dinerInfos;
     }
 }

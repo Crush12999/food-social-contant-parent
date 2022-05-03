@@ -36,4 +36,17 @@ public class FollowController {
                 isFollowed, access_token, request.getServletPath());
         return resultInfo;
     }
+
+    /**
+     * 共同关注列表
+     *
+     * @param dinerId      当前登录用户正在查看的食客
+     * @param access_token 当前登录用户
+     * @return 共同关注列表
+     */
+    @GetMapping("commons/{dinerId}")
+    public ResultInfo findCommonsFriends(@PathVariable Integer dinerId,
+                                         String access_token) {
+        return followService.findCommonsFriends(dinerId, access_token, request.getServletPath());
+    }
 }

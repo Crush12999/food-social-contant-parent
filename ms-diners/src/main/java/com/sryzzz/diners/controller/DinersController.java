@@ -2,6 +2,7 @@ package com.sryzzz.diners.controller;
 
 import com.sryzzz.commons.model.domain.ResultInfo;
 import com.sryzzz.commons.model.dto.DinersDTO;
+import com.sryzzz.commons.model.vo.ShortDinerInfo;
 import com.sryzzz.commons.utils.ResultInfoUtil;
 import com.sryzzz.diners.service.DinersService;
 import io.swagger.annotations.Api;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
+import java.util.List;
 
 /**
  * @author sryzzz
@@ -61,5 +63,17 @@ public class DinersController {
     @PostMapping("register")
     public ResultInfo register(@RequestBody DinersDTO dinersDTO) {
         return dinersService.register(dinersDTO, request.getServletPath());
+    }
+
+    /**
+     * 根据 ids 查询食客信息
+     *
+     * @param ids
+     * @return
+     */
+    @GetMapping("findByIds")
+    public ResultInfo<List<ShortDinerInfo>> findByIds(String ids) {
+        List<ShortDinerInfo> dinerInfos = dinersService.findByIds(ids);
+        return ResultInfoUtil.buildSuccess(request.getServletPath(), dinerInfos);
     }
 }

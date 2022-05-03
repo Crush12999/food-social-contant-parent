@@ -1,11 +1,13 @@
 package com.sryzzz.follow.service;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.util.StrUtil;
 import com.sryzzz.commons.constant.ApiConstant;
 import com.sryzzz.commons.constant.RedisKeyConstant;
 import com.sryzzz.commons.exception.ParameterException;
 import com.sryzzz.commons.model.domain.ResultInfo;
 import com.sryzzz.commons.model.pojo.Follow;
+import com.sryzzz.commons.model.vo.ShortDinerInfo;
 import com.sryzzz.commons.model.vo.SignInDinerInfo;
 import com.sryzzz.commons.utils.AssertUtil;
 import com.sryzzz.commons.utils.ResultInfoUtil;
@@ -16,7 +18,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import javax.annotation.Resource;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * @author sryzzz
@@ -29,6 +35,9 @@ public class FollowService {
     @Value("${service.name.ms-oauth-server}")
     private String oauthServerName;
 
+    @Value("${service.name.ms-diners-server}")
+    private String dinersServerName;
+
     @Resource
     private RestTemplate restTemplate;
 
@@ -37,6 +46,45 @@ public class FollowService {
 
     @Resource
     private RedisTemplate redisTemplate;
+
+    /**
+     * 共同关注列表
+     *
+     * @param dinerId 另外一个人
+     * @param accessToken 当前在登录用户
+     * @param path 路径
+     * @return 共同关注的好友
+     */
+    public ResultInfo findCommonsFriends(Integer dinerId, String accessToken, String path) {
+        // 是否选择了关注对象
+        AssertUtil.isTrue(dinerId == null || dinerId < 1, "请选择要查看的人");
+        // 获取登录用户信息
+        SignInDinerInfo dinerInfo = loadSignInDinerInfo(accessToken);
+        // 获取登录用户的关注信息
+        String loginDinerKey = RedisKeyConstant.following.getKey() + dinerInfo.getId();
+        // 获取登录用户查看对象的关注信息
+        String dinerKey = RedisKeyConstant.following.getKey() + dinerId;
+        // 计算交集
+        Set<Integer> dinerIds = redisTemplate.opsForSet().intersect(loginDinerKey, dinerKey);
+        // 没有
+        if (dinerIds == null || dinerIds.isEmpty()) {
+            return ResultInfoUtil.buildSuccess(path, new ArrayList<ShortDinerInfo>());
+        }
+        // 根据 ids 调用食客服务查询食客信息
+        ResultInfo resultInfo = restTemplate.getForObject(dinersServerName + "findByIds?access_token={accessToken}&ids={ids}",
+                ResultInfo.class, accessToken, StrUtil.join(",", dinerIds));
+        if (resultInfo.getCode() != ApiConstant.SUCCESS_CODE) {
+            resultInfo.setPath(path);
+            return resultInfo;
+        }
+        // 处理结果集
+        List<LinkedHashMap> dinerInfoMaps = (ArrayList) resultInfo.getData();
+        List<ShortDinerInfo> dinerInfos = dinerInfoMaps.stream()
+                .map(diner -> BeanUtil.fillBeanWithMap(diner, new ShortDinerInfo(), true))
+                .collect(Collectors.toList());
+
+        return ResultInfoUtil.buildSuccess(path, dinerInfos);
+    }
 
     /**
      * 关注 / 取关
