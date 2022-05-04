@@ -63,20 +63,20 @@ public class FeedsService {
         }
         // 获取登录用户
         SignInDinerInfo dinerInfo = loadSignInDinerInfo(accessToken);
-        // 我关注的好友的FeedKey
-        String key = RedisKeyConstant.following_feeds.getKey();
-        // 分页查询 SortedSet 的 ZREVERNGE 的命令是闭区间
+        // 我关注的好友的 Feedkey
+        String key = RedisKeyConstant.following_feeds.getKey() + dinerInfo.getId();
+        // SortedSet 的 ZREVRANGE 命令是闭区间
         long start = (page - 1) * ApiConstant.PAGE_SIZE;
         long end = page * ApiConstant.PAGE_SIZE - 1;
         Set<Integer> feedIds = redisTemplate.opsForZSet().reverseRange(key, start, end);
         if (feedIds == null || feedIds.isEmpty()) {
             return Lists.newArrayList();
         }
-        // 根据多主键查询Feed
+        // 根据多主键查询 Feed
         List<Feeds> feeds = feedsMapper.findFeedsByIds(feedIds);
-        // 初始化一个关注好友的 ID 集合
+        // 初始化关注好友 ID 集合
         List<Integer> followingDinerIds = new ArrayList<>();
-        // 添加用户 ID 至 Feed集合，顺带将 Feeds 转为 VO 对象
+        // 添加用户 ID 至集合，顺带将 Feeds 转为 Vo 对象
         List<FeedsVO> feedsVOS = feeds.stream().map(feed -> {
             FeedsVO feedsVO = new FeedsVO();
             BeanUtil.copyProperties(feed, feedsVO);
@@ -85,23 +85,23 @@ public class FeedsService {
             return feedsVO;
         }).collect(Collectors.toList());
         // 远程调用获取 Feed 中用户信息
-        ResultInfo resultInfo = restTemplate.getForObject(dinersServerName + "findByIds?access_token=${accessToken}&ids=${ids}",
-                ResultInfo.class, accessToken, followingDinerIds);
+        ResultInfo resultInfo = restTemplate.getForObject(dinersServerName + "findByIds?access_token=${accessToken}&ids={ids}",
+                ResultInfo.class, accessToken, followingDinerIds.toArray(new Integer[]{}));
         if (resultInfo.getCode() != ApiConstant.SUCCESS_CODE) {
             throw new ParameterException(resultInfo.getCode(), resultInfo.getMessage());
         }
         List<LinkedHashMap> dinerInfoMaps = (ArrayList) resultInfo.getData();
-        // 构建一个key为用户 id，value 为 ShortDinerInfo 的 Map
-        Map<Integer, ShortDinerInfo> dinerInfoMap = dinerInfoMaps.stream()
+        // 构建一个 key 为用户 ID，value 为 ShortDinerInfo 的 Map
+        Map<Integer, ShortDinerInfo> dinerInfos = dinerInfoMaps.stream()
                 .collect(Collectors.toMap(
                         // key
                         diner -> (Integer) diner.get("id"),
                         // value
                         diner -> BeanUtil.fillBeanWithMap(diner, new ShortDinerInfo(), true)
                 ));
-        // 循环vo集合，根据用户 ID 从 Map 中获取用户信息并设置至 VO 对象
+        // 循环 VO 集合，根据用户 ID 从 Map 中获取用户信息并设置至 VO 对象
         feedsVOS.forEach(feedsVO -> {
-            feedsVO.setDinerInfo(dinerInfoMap.get(feedsVO.getFkDinerId()));
+            feedsVO.setDinerInfo(dinerInfos.get(feedsVO.getFkDinerId()));
         });
         return feedsVOS;
     }
