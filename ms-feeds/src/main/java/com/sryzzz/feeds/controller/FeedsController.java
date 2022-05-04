@@ -4,9 +4,7 @@ import com.sryzzz.commons.model.domain.ResultInfo;
 import com.sryzzz.commons.model.pojo.Feeds;
 import com.sryzzz.commons.utils.ResultInfoUtil;
 import com.sryzzz.feeds.service.FeedsService;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
@@ -25,6 +23,20 @@ public class FeedsController {
     @Resource
     private HttpServletRequest request;
 
+
+    /**
+     * 删除 Feed
+     *
+     * @param id
+     * @param access_token
+     * @return
+     */
+    @DeleteMapping("{id}")
+    public ResultInfo deleteFeed(@PathVariable Integer id, String access_token) {
+        feedsService.delete(id, access_token);
+        return ResultInfoUtil.buildSuccess(request.getServletPath(), "删除成功");
+    }
+
     /**
      * 添加 Feed
      *
@@ -33,7 +45,7 @@ public class FeedsController {
      * @return
      */
     @PostMapping
-    public ResultInfo<String> create(@RequestBody Feeds feeds, String access_token) {
+    public ResultInfo create(@RequestBody Feeds feeds, String access_token) {
         feedsService.create(feeds, access_token);
         return ResultInfoUtil.buildSuccess(request.getServletPath(), "添加成功");
     }

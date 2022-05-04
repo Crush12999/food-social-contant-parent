@@ -11,6 +11,27 @@ import org.apache.ibatis.annotations.*;
 public interface FeedsMapper {
 
     /**
+     * 查询 Feed
+     *
+     * @param id
+     * @return
+     */
+    @Select("select id, content, fk_diner_id, praise_amount, " +
+            " comment_amount, fk_restaurant_id, create_date, update_date, is_valid " +
+            " from t_feeds where id = #{id} and is_valid = 1")
+    Feeds findById(@Param("id") Integer id);
+
+    /**
+     * 逻辑删除 Feed
+     *
+     * @param id
+     * @return
+     */
+    @Update("update t_feeds set is_valid = 0 where id = #{id} and is_valid = 1")
+    int delete(@Param("id") Integer id);
+
+
+    /**
      * 添加 Feed
      *
      * @param feeds feeds信息

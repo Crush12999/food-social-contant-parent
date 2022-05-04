@@ -43,6 +43,38 @@ public class FeedsService {
     private RedisTemplate redisTemplate;
 
     /**
+     * 删除feed
+     *
+     * @param id
+     * @param accessToken
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void delete(Integer id, String accessToken) {
+        // 请选择要删除的 Feed
+        AssertUtil.isTrue(id == null || id < 1, "请选择要删除的Feed");
+        // 获取登录用户
+        SignInDinerInfo dinerInfo = loadSignInDinerInfo(accessToken);
+        // 获取 Feed 内容
+        Feeds feeds = feedsMapper.findById(id);
+        // 判断 Feed 是否已被删除且只能删除自己的 Feed
+        AssertUtil.isTrue(feeds == null, "该Feed已被删除");
+        AssertUtil.isTrue(!feeds.getFkDinerId().equals(dinerInfo.getId()), "只能删除自己的Feed");
+        // 删除
+        int count = feedsMapper.delete(id);
+        if (count == 0) {
+            return;
+        }
+        // 将内容从粉丝的集合中删除 -- 异步消息队列优化
+        // 先获取我的粉丝
+        List<Integer> followers = findFollowers(dinerInfo.getId());
+        // 移除 Feed
+        followers.forEach(follower -> {
+            String key = RedisKeyConstant.following_feeds.getKey() + follower;
+            redisTemplate.opsForZSet().remove(key, feeds.getId());
+        });
+    }
+
+    /**
      * 添加 feed
      *
      * @param feeds       feed信息
