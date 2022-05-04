@@ -49,4 +49,20 @@ public class FeedsController {
         feedsService.create(feeds, access_token);
         return ResultInfoUtil.buildSuccess(request.getServletPath(), "添加成功");
     }
+
+
+    /**
+     * 变更 Feed
+     *
+     * @param followingDinerId
+     * @param access_token
+     * @param type
+     * @return
+     */
+    @PostMapping("updateFollowingFeeds/{followingDinerId}")
+    public ResultInfo addFollowingFeed(@PathVariable Integer followingDinerId,
+                                       String access_token, @RequestParam int type) {
+        feedsService.addFollowingFeed(followingDinerId, access_token, type);
+        return ResultInfoUtil.buildSuccess(request.getServletPath(), "操作成功");
+    }
 }

@@ -10,7 +10,9 @@ import com.sryzzz.commons.model.vo.SignInDinerInfo;
 import com.sryzzz.commons.utils.AssertUtil;
 import com.sryzzz.feeds.mapper.FeedsMapper;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.DefaultTypedTuple;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
@@ -18,6 +20,8 @@ import org.springframework.web.client.RestTemplate;
 import javax.annotation.Resource;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * @author sryzzz
@@ -41,6 +45,38 @@ public class FeedsService {
 
     @Resource
     private RedisTemplate redisTemplate;
+
+    /**
+     * 变更 Feed
+     *
+     * @param followingDinerId 关注好友的ID
+     * @param accessToken      登录用户的Token
+     * @param type             1关注  0取关
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void addFollowingFeed(Integer followingDinerId, String accessToken, int type) {
+        // 请选择关注的好友
+        AssertUtil.isTrue(followingDinerId == null || followingDinerId < 1, "请选择关注的好友");
+        // 获取登录信息
+        SignInDinerInfo dinerInfo = loadSignInDinerInfo(accessToken);
+        // 获取关注/取关的食客的所有 Feed
+        List<Feeds> feedsList = feedsMapper.findByDinerId(followingDinerId);
+
+        String key = RedisKeyConstant.following_feeds.getKey() + dinerInfo.getId();
+        if (type == 0) {
+            // 取关
+            List<Integer> feedIds = feedsList.stream()
+                    .map(feeds -> feeds.getId()).collect(Collectors.toList());
+            redisTemplate.opsForZSet().remove(key, feedIds.toArray(new Integer[]{}));
+        } else {
+            // 关注
+            Set<ZSetOperations.TypedTuple> typedTuples = feedsList.stream()
+                    .map(feed -> new DefaultTypedTuple<>(feed.getId(), (double) feed.getUpdateDate().getTime()))
+                    .collect(Collectors.toSet());
+            redisTemplate.opsForZSet().add(key, typedTuples);
+        }
+
+    }
 
     /**
      * 删除feed

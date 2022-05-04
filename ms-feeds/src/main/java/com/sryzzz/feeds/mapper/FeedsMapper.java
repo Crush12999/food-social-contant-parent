@@ -3,12 +3,25 @@ package com.sryzzz.feeds.mapper;
 import com.sryzzz.commons.model.pojo.Feeds;
 import org.apache.ibatis.annotations.*;
 
+import java.util.List;
+
 /**
  * @author sryzzz
  * @create 2022/5/1 13:43
  * @description Feed Mapper 层
  */
 public interface FeedsMapper {
+
+
+    /**
+     * 根据食客 ID 查询 Feed
+     *
+     * @param dinerId 食客 ID
+     * @return Feed集合
+     */
+    @Select("select id, content, update_date from t_feeds " +
+            " where fk_diner_id = #{dinerId} and is_valid = 1")
+    List<Feeds> findByDinerId(@Param("dinerId") Integer dinerId);
 
     /**
      * 查询 Feed
