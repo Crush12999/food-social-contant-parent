@@ -58,6 +58,9 @@ public class FeedsService {
      * @return feed
      */
     public List<FeedsVO> selectForPage(Integer page, String accessToken) {
+        if (page == null) {
+            page = 1;
+        }
         // 获取登录用户
         SignInDinerInfo dinerInfo = loadSignInDinerInfo(accessToken);
         // 我关注的好友的FeedKey
