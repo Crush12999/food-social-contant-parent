@@ -2,12 +2,14 @@ package com.sryzzz.feeds.controller;
 
 import com.sryzzz.commons.model.domain.ResultInfo;
 import com.sryzzz.commons.model.pojo.Feeds;
+import com.sryzzz.commons.model.vo.FeedsVO;
 import com.sryzzz.commons.utils.ResultInfoUtil;
 import com.sryzzz.feeds.service.FeedsService;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
+import java.util.List;
 
 /**
  * @author sryzzz
@@ -22,6 +24,20 @@ public class FeedsController {
 
     @Resource
     private HttpServletRequest request;
+
+
+    /**
+     * 分页获取关注的 Feed 数据
+     *
+     * @param page
+     * @param access_token
+     * @return
+     */
+    @GetMapping("{page}")
+    public ResultInfo selectForPage(@PathVariable Integer page, String access_token) {
+        List<FeedsVO> feedsVOS = feedsService.selectForPage(page, access_token);
+        return ResultInfoUtil.buildSuccess(request.getServletPath(), feedsVOS);
+    }
 
 
     /**

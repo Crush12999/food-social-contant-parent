@@ -4,6 +4,7 @@ import com.sryzzz.commons.model.pojo.Feeds;
 import org.apache.ibatis.annotations.*;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * @author sryzzz
@@ -56,5 +57,21 @@ public interface FeedsMapper {
             " now(), now(), 1)")
     @Options(useGeneratedKeys = true, keyProperty = "id")
     int save(Feeds feeds);
+
+    /**
+     * 根据多主键查询 Feed
+     *
+     * @param feedIds
+     * @return
+     */
+    @Select("<script> " +
+            " select id, content, fk_diner_id, praise_amount, " +
+            " comment_amount, fk_restaurant_id, create_date, update_date, is_valid " +
+            " from t_feeds where is_valid = 1 and id in " +
+            " <foreach item=\"id\" collection=\"feedIds\" open=\"(\" separator=\",\" close=\")\">" +
+            "   #{id}" +
+            " </foreach> order by id desc" +
+            " </script>")
+    List<Feeds> findFeedsByIds(@Param("feedIds") Set<Integer> feedIds);
 
 }
