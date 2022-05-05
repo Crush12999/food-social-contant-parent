@@ -2,6 +2,7 @@ package com.sryzzz.diners.service;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.date.DateUtil;
+import cn.hutool.core.date.LocalDateTimeUtil;
 import cn.hutool.core.util.StrUtil;
 import com.sryzzz.commons.constant.ApiConstant;
 import com.sryzzz.commons.exception.ParameterException;
@@ -10,14 +11,14 @@ import com.sryzzz.commons.model.vo.SignInDinerInfo;
 import com.sryzzz.commons.utils.AssertUtil;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.connection.BitFieldSubCommands;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import javax.annotation.Resource;
-import java.util.Date;
-import java.util.LinkedHashMap;
-import java.util.List;
+import java.time.LocalDateTime;
+import java.util.*;
 
 /**
  * @author sryzzz
@@ -35,6 +36,67 @@ public class SignService {
 
     @Resource
     private RedisTemplate redisTemplate;
+
+    /**
+     * 获取当月签到情况
+     *
+     * @param accessToken 登录用户token
+     * @param dataStr     日期字符串（yyyy-MM-dd）
+     * @return
+     */
+    public Map<String, Boolean> getSignInfo(String accessToken, String dataStr) {
+        // 获取某月签到情况，默认当月
+        SignInDinerInfo dinerInfo = loadSignInDinerInfo(accessToken);
+        // 获取登录用户信息
+        Date date = getDate(dataStr);
+        // 构建 key
+        String signKey = buildSignKey(dinerInfo.getId(), date);
+        // 构建一个自动排序的 Map
+        Map<String, Boolean> signInfo = new TreeMap<>();
+        // 获取某月的天数，考虑闰年
+        int dayOfMonth = DateUtil.lengthOfMonth(DateUtil.month(date) + 1,
+                DateUtil.isLeapYear(DateUtil.dayOfYear(date)));
+
+        // bitfield user:sign:5:202205 u30 0
+        BitFieldSubCommands bitFieldSubCommands = BitFieldSubCommands.create()
+                .get(BitFieldSubCommands.BitFieldType.unsigned(dayOfMonth))
+                .valueAt(0);
+        List<Long> list = redisTemplate.opsForValue().bitField(signKey, bitFieldSubCommands);
+        if (list == null || list.isEmpty()) {
+            return signInfo;
+        }
+        long v = list.get(0) == null ? 0 : list.get(0);
+        // 从低位到高位进行遍历，为 0 表示未签到， 为 1 表示已签到
+        for (int i = dayOfMonth; i > 0; i--) {
+            // 签到：yyyy-MM-01 true
+            // 未签到： yyyy-MM-02 false
+            LocalDateTime localDateTime = LocalDateTimeUtil.of(date).withDayOfMonth(i);
+            boolean flag = v >> 1 << 1 != v;
+            signInfo.put(DateUtil.format(localDateTime, "yyyy-MM-dd"), flag);
+            v >>= 1;
+        }
+        return signInfo;
+    }
+
+    /**
+     * 获取用户签到次数
+     *
+     * @param accessToken 登录用户token
+     * @param dataStr     日期字符串（2022-05-26）
+     * @return 用户签到次数（默认本月）
+     */
+    public long getSignCount(String accessToken, String dataStr) {
+        // 获取登录用户信息
+        SignInDinerInfo dinerInfo = loadSignInDinerInfo(accessToken);
+        // 获取日期
+        Date date = getDate(dataStr);
+        // 构建key
+        String signKey = buildSignKey(dinerInfo.getId(), date);
+        // e.g. BITCOUNT user:sign:dinerId:202205
+        return (long) redisTemplate.execute(
+                (RedisCallback<Long>) con -> con.bitCount(signKey.getBytes())
+        );
+    }
 
     /**
      * 用户签到
@@ -59,7 +121,7 @@ public class SignService {
         // 签到
         redisTemplate.opsForValue().setBit(signKey, offset, true);
         // 统计连续签到的次数
-        int count = getSignCount(dinerInfo.getId(), date);
+        int count = getContinuousSignCount(dinerInfo.getId(), date);
         return count;
     }
 
@@ -71,7 +133,7 @@ public class SignService {
     private void checkSignParamDate(Date date) {
         Date now = new Date();
         String paramMonth = DateUtil.format(date, "MM");
-        String  nowMonth = DateUtil.format(now, "MM");
+        String nowMonth = DateUtil.format(now, "MM");
         AssertUtil.isTrue(!paramMonth.equals(nowMonth), "只能对当前月份补签");
         String paramDate = DateUtil.format(date, "yyyyMMdd");
         String nowDate = DateUtil.format(now, "yyyyMMdd");
@@ -85,7 +147,7 @@ public class SignService {
      * @param date    时间
      * @return 连续签到的次数
      */
-    private int getSignCount(Integer dinerId, Date date) {
+    private int getContinuousSignCount(Integer dinerId, Date date) {
         // 获取日期对应的天数，多少号，假设是31
         int dayOfMonth = DateUtil.dayOfMonth(date);
         // 构建 key

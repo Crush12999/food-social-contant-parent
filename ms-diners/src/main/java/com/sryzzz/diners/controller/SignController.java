@@ -4,13 +4,11 @@ import com.sryzzz.commons.constant.ApiConstant;
 import com.sryzzz.commons.model.domain.ResultInfo;
 import com.sryzzz.commons.utils.ResultInfoUtil;
 import com.sryzzz.diners.service.SignService;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
+import java.util.Map;
 
 /**
  * @author sryzzz
@@ -28,10 +26,36 @@ public class SignController {
     private HttpServletRequest request;
 
     /**
+     * 获取当月签到情况
+     *
+     * @param access_token 登录用户token
+     * @param date     日期字符串（yyyy-MM-dd）
+     * @return 当月签到情况
+     */
+    @GetMapping
+    public ResultInfo getSignInfo(String access_token, String date) {
+        Map<String, Boolean> map = signService.getSignInfo(access_token, date);
+        return ResultInfoUtil.buildSuccess(request.getServletPath(), map);
+    }
+
+    /**
+     * 获取签到次数
+     *
+     * @param access_token 登录用户的token
+     * @param date         传入日期
+     * @return 某月签到次数
+     */
+    @GetMapping("count")
+    public ResultInfo getSignCount(String access_token, String date) {
+        Long count = signService.getSignCount(access_token, date);
+        return ResultInfoUtil.buildSuccess(request.getServletPath(), count);
+    }
+
+    /**
      * 用户签到，可以补签
      *
      * @param access_token 登录用户的token
-     * @param date 传入日期相当于补签
+     * @param date         传入日期相当于补签
      * @return
      */
     @PostMapping
