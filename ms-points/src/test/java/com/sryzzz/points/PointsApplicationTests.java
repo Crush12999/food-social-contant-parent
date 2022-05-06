@@ -1,0 +1,20 @@
+package com.sryzzz.points;
+
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.web.servlet.MockMvc;
+
+import javax.annotation.Resource;
+
+/**
+ * @author sryzzz
+ * @create 2022/5/5 23:10
+ * @description 积分单元测试
+ */
+@SpringBootTest
+@AutoConfigureMockMvc
+public class PointsApplicationTests {
+
+    @Resource
+    protected MockMvc mockMvc;
+}

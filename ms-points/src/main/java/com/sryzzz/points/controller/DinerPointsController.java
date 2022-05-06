@@ -1,14 +1,17 @@
 package com.sryzzz.points.controller;
 
 import com.sryzzz.commons.model.domain.ResultInfo;
+import com.sryzzz.commons.model.vo.DinerPointsRankVO;
 import com.sryzzz.commons.utils.ResultInfoUtil;
 import com.sryzzz.points.service.DinerPointsService;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
+import java.util.List;
 
 /**
  * @author sryzzz
@@ -37,5 +40,17 @@ public class DinerPointsController {
                                          @RequestParam(required = false) Integer types) {
         dinerPointsService.addPoints(dinerId, points, types);
         return ResultInfoUtil.buildSuccess(request.getServletPath(), points);
+    }
+
+    /**
+     * 查询前 20 积分排行榜，同时显示用户排名 -- MySQL
+     *
+     * @param access_token 当前登录用户
+     * @return
+     */
+    @GetMapping
+    public ResultInfo findDinerPointsRank(String access_token) {
+        List<DinerPointsRankVO> ranks = dinerPointsService.findDinerPointRank(access_token);
+        return ResultInfoUtil.buildSuccess(request.getServletPath(), ranks);
     }
 }
