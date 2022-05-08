@@ -53,6 +53,13 @@ spring:
           filters:
             - StripPrefix=1
 
+        - id: ms-restaurants
+          uri: lb://ms-restaurants
+          predicates:
+            - Path=/restaurants/**
+          filters:
+            - StripPrefix=1
+
 secure:
   ignore:
     urls: # 配合白名单路径
@@ -63,6 +70,7 @@ secure:
       - /diners/checkPhone
       - /diners/register
       - /seckill/add
+      - /restaurants/**
 
 
 #  并注册到注册中心，启动并测试
