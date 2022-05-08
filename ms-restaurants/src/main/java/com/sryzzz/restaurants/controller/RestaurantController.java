@@ -21,6 +21,7 @@ public class RestaurantController {
 
     @Resource
     private RestaurantService restaurantService;
+
     @Resource
     private HttpServletRequest request;
 
@@ -30,7 +31,7 @@ public class RestaurantController {
      * @param restaurantId
      * @return
      */
-    @GetMapping("{restaurantId}")
+    @GetMapping("detail/{restaurantId}")
     public ResultInfo<Restaurant> findById(@PathVariable Integer restaurantId) {
         Restaurant restaurant = restaurantService.findById(restaurantId);
         return ResultInfoUtil.buildSuccess(request.getServletPath(), restaurant);

@@ -23,6 +23,7 @@ public class RestaurantService {
 
     @Resource
     public RestaurantMapper restaurantMapper;
+
     @Resource
     public RedisTemplate redisTemplate;
 

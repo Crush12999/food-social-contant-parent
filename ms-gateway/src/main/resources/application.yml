@@ -56,7 +56,7 @@ spring:
         - id: ms-restaurants
           uri: lb://ms-restaurants
           predicates:
-            - Path=/restaurants/**
+            - Path=/restaurants/detail
           filters:
             - StripPrefix=1
 

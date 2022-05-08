@@ -51,9 +51,14 @@ public enum RedisKeyConstant {
     diner_location("diner:location", "diner地理位置信息"),
 
     /**
-     *
+     * 餐厅的key
      */
     restaurants("restaurants:", "餐厅的key"),
+
+    /**
+     * 餐厅评论key
+     */
+    restaurant_new_reviews("restaurant:new:reviews:", "餐厅评论key"),
     ;
 
     private String key;
