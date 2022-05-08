@@ -49,6 +49,11 @@ public enum RedisKeyConstant {
      * diner地理位置信息
      */
     diner_location("diner:location", "diner地理位置信息"),
+
+    /**
+     *
+     */
+    restaurants("restaurants:", "餐厅的key"),
     ;
 
     private String key;
