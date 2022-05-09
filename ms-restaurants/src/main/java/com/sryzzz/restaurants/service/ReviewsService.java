@@ -1,12 +1,16 @@
 package com.sryzzz.restaurants.service;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.util.StrUtil;
+import com.google.common.collect.Lists;
 import com.sryzzz.commons.constant.ApiConstant;
 import com.sryzzz.commons.constant.RedisKeyConstant;
 import com.sryzzz.commons.exception.ParameterException;
 import com.sryzzz.commons.model.domain.ResultInfo;
 import com.sryzzz.commons.model.pojo.Restaurant;
 import com.sryzzz.commons.model.pojo.Reviews;
+import com.sryzzz.commons.model.vo.ReviewsVO;
+import com.sryzzz.commons.model.vo.ShortDinerInfo;
 import com.sryzzz.commons.model.vo.SignInDinerInfo;
 import com.sryzzz.commons.utils.AssertUtil;
 import com.sryzzz.restaurants.mapper.ReviewsMapper;
@@ -17,7 +21,11 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
 import javax.annotation.Resource;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * @author sryzzz
@@ -29,14 +37,23 @@ public class ReviewsService {
 
     @Value("${service.name.ms-oauth-server}")
     private String oauthServerName;
+
     @Resource
     private RestTemplate restTemplate;
+
     @Resource
     private RedisTemplate redisTemplate;
+
     @Resource
     private RestaurantService restaurantService;
+
     @Resource
     private ReviewsMapper reviewsMapper;
+
+    @Value("${service.name.ms-diners-server}")
+    private String dinersServerName;
+
+    private static final int NINE = 9;
 
     /**
      * 添加餐厅评论
@@ -74,6 +91,56 @@ public class ReviewsService {
         redisTemplate.opsForList().leftPush(key, reviews);
         // 保证队列中只需要十条 作业
     }
+
+    /**
+     * 获取餐厅最新评论
+     *
+     * @param restaurantId 餐厅id
+     * @param accessToken  登录Token
+     * @return
+     */
+    public List<ReviewsVO> findNewReviews(Integer restaurantId, String accessToken) {
+        // 参数校验
+        AssertUtil.isTrue(restaurantId == null || restaurantId < 1, "请选择餐厅进行查看");
+        // 获取 Key
+        String key = RedisKeyConstant.restaurant_new_reviews.getKey() + restaurantId;
+        // 取前十条
+        List<LinkedHashMap> reviews = redisTemplate.opsForList().range(key, 0, NINE);
+        // 初始化 VO 集合
+        List<ReviewsVO> reviewsVOS = Lists.newArrayList();
+        // 初始化用户 ID 集合
+        List<Integer> dinerIds = Lists.newArrayList();
+        // 循环处理评论集合
+        reviews.forEach(review -> {
+            ReviewsVO reviewsVO = BeanUtil.fillBeanWithMap(review,
+                    new ReviewsVO(), true);
+            reviewsVOS.add(reviewsVO);
+            dinerIds.add(reviewsVO.getFkDinerId());
+        });
+        // 查询评论用户信息
+        ResultInfo resultInfo = restTemplate.getForObject(dinersServerName +
+                        "findByIds?access_token=${accessToken}&ids={ids}",
+                ResultInfo.class, accessToken, StrUtil.join(",", dinerIds));
+        if (resultInfo.getCode() != ApiConstant.SUCCESS_CODE) {
+            throw new ParameterException(resultInfo.getCode(), resultInfo.getMessage());
+        }
+        List<LinkedHashMap> dinerInfoMaps = (ArrayList) resultInfo.getData();
+        Map<Integer, ShortDinerInfo> dinerInfos = dinerInfoMaps.stream()
+                .collect(Collectors.toMap(
+                        diner -> (int) diner.get("id"),
+                        diner -> BeanUtil.fillBeanWithMap(diner,
+                                new ShortDinerInfo(), true))
+                );
+        // 循环处理 VO 集合插入用户信息
+        reviewsVOS.forEach(review -> {
+            ShortDinerInfo dinerInfo = dinerInfos.get(review.getFkDinerId());
+            if (dinerInfo != null) {
+                review.setDinerInfo(dinerInfo);
+            }
+        });
+        return reviewsVOS;
+    }
+
 
     /**
      * 获取登录用户信息
