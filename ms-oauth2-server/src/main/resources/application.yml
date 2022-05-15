@@ -17,14 +17,33 @@ spring:
     # port: 6379
     # host: 192.168.131.61
     timeout: 3000
-    database: 1
+    # 集群模式不需要配置 database
+    # database: 1
     password: 123456
-    # 哨兵
-    sentinel:
+    # lettuce 连接池
+    lettuce:
+      pool:
+        max-active: 8 # 最大连接数，默认 8
+        max-idle: 8 # 最大空闲连接，默认 8
+        min-idle: 0 # 最小空闲连接，默认 0
+        max-wait: 1000 # 最大连接阻塞等待时间，单位毫秒，默认 -1
+    cluster:
+      nodes:
+        192.168.131.61:6371,
+        192.168.131.61:6372,
+        192.168.131.64:6373,
+        192.168.131.64:6374,
+        192.168.131.65:6375,
+        192.168.131.65:6376
+      max-redirects: 5 # Redis 命令执行最多转发次数
+
+      # 哨兵
+    # sentinel:
       # 主节点名称
-      master: mymaster
+      # master: mymaster
       # 主从服务器地址
-      nodes: 192.168.131.61:26379,192.168.131.64:26379,192.168.131.65:26379
+      # nodes: 192.168.131.61:26379,192.168.131.64:26379,192.168.131.65:26379
+
 
   # swagger
   swagger:

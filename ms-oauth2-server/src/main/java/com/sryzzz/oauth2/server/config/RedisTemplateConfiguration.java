@@ -2,6 +2,7 @@ package com.sryzzz.oauth2.server.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.redis.connection.RedisClusterConfiguration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.RedisSentinelConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
@@ -15,7 +16,7 @@ import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactor
 public class RedisTemplateConfiguration {
 
     // @Bean
-    public RedisConnectionFactory lettuceConnectionFactory() {
+    /*public RedisConnectionFactory lettuceConnectionFactory() {
         RedisSentinelConfiguration sentinelConfiguration = new RedisSentinelConfiguration()
                 .master("mymaster")
                 .sentinel("192.168.131.61", 26379)
@@ -24,5 +25,18 @@ public class RedisTemplateConfiguration {
         sentinelConfiguration.setDatabase(1);
         sentinelConfiguration.setPassword("123456");
         return new LettuceConnectionFactory(sentinelConfiguration);
+    }*/
+
+    public RedisConnectionFactory lettuceConnectionFactory() {
+        RedisClusterConfiguration clusterConfiguration = new RedisClusterConfiguration()
+                .clusterNode("192.168.131.61", 6371)
+                .clusterNode("192.168.131.61", 6372)
+                .clusterNode("192.168.131.64", 6373)
+                .clusterNode("192.168.131.64", 6374)
+                .clusterNode("192.168.131.65", 6375)
+                .clusterNode("192.168.131.65", 6376);
+        clusterConfiguration.setMaxRedirects(5);
+        clusterConfiguration.setPassword("123456");
+        return new LettuceConnectionFactory(clusterConfiguration);
     }
 }
